@@ -188,7 +188,7 @@ function auditConfig(config) {
     'pepper', 'version', 'peppers', 'currentVersion', 'expiresInSeconds', 'ttlMs'
   ]);
   for (const key of Object.keys(config)) {
-    if (!allowed.has(key)) findings.push(finding('warning', key, 'unknown-key', 'configuration key is not recognized'));
+    if (!allowed.has(key)) findings.push(finding('warning', key, 'unknown-key', 'unknown configuration key is ignored by lint-config; remove it or correct the spelling before relying on this configuration'));
   }
   if (typeof config.prefix !== 'string') {
     findings.push(finding('error', 'prefix', 'missing-prefix', 'prefix is required'));
@@ -325,7 +325,12 @@ function commandLintConfig(args) {
   const errors = findings.filter((item) => item.level === 'error').length;
   const warnings = findings.filter((item) => item.level === 'warning').length;
   if (flags.has('--json')) {
-    writeJson({ valid: errors === 0, errors, warnings, findings });
+    const safeFindings = findings.map((item) => ({
+      ...item,
+      field: terminalSafe(item.field),
+      message: terminalSafe(item.message)
+    }));
+    writeJson({ valid: errors === 0, errors, warnings, findings: safeFindings });
   } else {
     process.stdout.write('valid: ' + (errors === 0 ? 'yes' : 'no') + '\n');
     process.stdout.write('errors: ' + errors + '\n');

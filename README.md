@@ -415,4 +415,6 @@ npm run smoke
 npm pack --dry-run
 ```
 
+As of the 1.0.0 release, `npm test` reports 738 passing tests.
+
 See `CONTRIBUTING.md` for contribution rules and `SECURITY.md` for vulnerability reporting.

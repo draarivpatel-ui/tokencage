@@ -59,6 +59,14 @@ test('pepper validation does not echo pepper material', () => {
   assert.equal(output.includes(weak), false);
 });
 
+test('pepper byte arrays are copied before validation and storage', () => {
+  const bytes = crypto.randomBytes(32);
+  const verifier = esm.createTokenVerifier({ pepper: bytes });
+  const encoded = verifier.hash(token);
+  bytes.fill(0);
+  assert.equal(verifier.verify(token, encoded), true);
+});
+
 test('hmac hash has the documented self-describing shape', () => {
   const encoded = hashToken(token, { pepper, version: 'v1' });
   assert.match(encoded, /^tc1\$hmac-sha256\$v1\$[A-Za-z0-9\-_]{43}$/);
@@ -325,6 +333,11 @@ test('hash option validation happens before expensive scrypt work', () => {
   const start = performance.now();
   assert.throws(() => hashToken('492810', { algorithm: 'scrypt', scrypt: { N: 8192 } }), TokenCageError);
   assert.equal(performance.now() - start < 100, true);
+});
+
+test('attacker-controlled huge scrypt parameters reject before key derivation', () => {
+  const encoded = 'tc1$scrypt$N=1073741824,r=16,p=4$' + 'A'.repeat(22) + '$' + 'A'.repeat(43);
+  assert.equal(verifyTokenHash('492810', encoded), false);
 });
 
 test('encoded hashes over the parser length ceiling return false', () => {

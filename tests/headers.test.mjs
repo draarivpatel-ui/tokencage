@@ -77,6 +77,13 @@ for (const [label, input] of [
   });
 }
 
+test('credential arrays cannot inherit their single value', () => {
+  const values = new Array(1);
+  Object.setPrototypeOf(values, { 0: 'Bearer ' + token });
+  assert.throws(() => extractBearerToken(values), TokenCageError);
+  assert.throws(() => extractBearerToken({ authorization: values }), TokenCageError);
+});
+
 for (const [label, header] of [
   ['empty', ''],
   ['scheme only', 'Bearer'],
@@ -85,6 +92,8 @@ for (const [label, header] of [
   ['leading token space then empty', 'Bearer  '],
   ['comma combined values', 'Bearer abc,Bearer def'],
   ['equals inside token', 'Bearer ab=cd'],
+  ['three trailing padding characters', 'Bearer abc==='],
+  ['four trailing padding characters', 'Bearer a===='],
   ['exclamation character', 'Bearer abc!'],
   ['quote character', 'Bearer abc"'],
   ['unicode', 'Bearer abcé'],

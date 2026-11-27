@@ -45,6 +45,14 @@ test('unknown CLI command exits with usage code 2', () => {
   assert.match(result.stderr, /unknown command/);
 });
 
+test('unknown CLI command does not echo secret-looking or control-bearing input', () => {
+  const sensitive = mint().token;
+  const result = runCli([sensitive + '\x1b[31m']);
+  assert.equal(result.status, 2);
+  assert.equal(result.stderr.includes(sensitive), false);
+  assert.equal(result.stderr.includes('\x1b'), false);
+});
+
 test('generate prints only the generated token by default', () => {
   const result = runCli(['generate', '--prefix', 'testapp']);
   assert.equal(result.status, 0);
@@ -314,6 +322,41 @@ test('lint-config malformed JSON exits 1', () => {
 test('lint-config missing file exits 1', () => {
   const result = runCli(['lint-config', '--config', path.join(scratch, 'missing.json')]);
   assert.equal(result.status, 1);
+});
+
+test('lint-config rejects a directory without treating it as configuration data', () => {
+  const result = runCli(['lint-config', '--config', scratch]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unable to read or parse configuration/);
+});
+
+test('lint-config rejects an oversized regular file', () => {
+  const file = path.join(scratch, 'oversized.json');
+  fs.writeFileSync(file, '{"prefix":"testapp","padding":"' + 'x'.repeat(1048577) + '"}');
+  const result = runCli(['lint-config', '--config', file]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unable to read or parse configuration/);
+});
+
+test('lint-config rejects a FIFO without blocking', () => {
+  if (process.platform === 'win32') return;
+  const fifo = path.join(scratch, 'input.fifo');
+  const made = spawnSync('mkfifo', [fifo], { encoding: 'utf8' });
+  assert.equal(made.status, 0, made.stderr);
+  const result = runCli(['lint-config', '--config', fifo], { timeout: 5000 });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unable to read or parse configuration/);
+});
+
+test('lint-config text output neutralizes terminal control characters in key names', () => {
+  const hostileKey = '\x1b[31mevil';
+  const config = { prefix: 'testapp' };
+  config[hostileKey] = true;
+  const file = writeConfig('ansi-key.json', config);
+  const result = runCli(['lint-config', '--config', file]);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.includes('\x1b'), false);
+  assert.match(result.stdout, /\\u001b/);
 });
 
 test('lint-config text output summarizes counts', () => {

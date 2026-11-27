@@ -208,9 +208,10 @@ test('package bin entry has no leading dot slash', () => {
   assert.deepEqual(pkg.bin, { tokencage: 'bin/tokencage.mjs' });
 });
 
-test('package test script uses the explicit cross-platform glob', () => {
+test('package test script avoids shell-dependent glob expansion', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(pkg.scripts.test, 'node --test tests/*.test.mjs');
+  assert.equal(pkg.scripts.test, 'node --test tests');
+  assert.equal(pkg.scripts.test.includes('*'), false);
 });
 
 test('package engines require Node.js 18 or newer', () => {

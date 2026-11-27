@@ -87,10 +87,12 @@ test('gitignore excludes node_modules coverage archives and platform noise', () 
   }
 });
 
-test('CLI file is executable and has a node shebang', () => {
+test('CLI file is executable where executable bits exist and has a node shebang', () => {
   const file = path.join(root, 'bin', 'tokencage.mjs');
-  const mode = fs.statSync(file).mode;
-  assert.equal((mode & 0o111) !== 0, true);
+  if (process.platform !== 'win32') {
+    const mode = fs.statSync(file).mode;
+    assert.equal((mode & 0o111) !== 0, true);
+  }
   assert.equal(fs.readFileSync(file, 'utf8').startsWith('#!/usr/bin/env node\n'), true);
 });
 

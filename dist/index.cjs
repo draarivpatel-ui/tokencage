@@ -64,7 +64,7 @@ const SCRYPT_SALT_LENGTH = 16;
 const SCRYPT_KEY_LENGTH = 32;
 const SCRYPT_DEFAULTS = Object.freeze({ N: 16384, r: 8, p: 1 });
 const SCRYPT_MAX_MEMORY_BYTES = 64 * 1024 * 1024;
-const TOKEN68_RE = /^[A-Za-z0-9._~+/\-]+=*$/;
+const TOKEN68_RE = /^[A-Za-z0-9._~+/\-]+={0,2}$/;
 const HEADER_NAME_RE = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 const VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/;
 const PREFIX_RE = /^[a-z][a-z0-9_]{1,23}$/;
@@ -133,6 +133,11 @@ function assertKnownKeys(options, allowedKeys) {
   const allowed = new Set(allowedKeys);
   for (const key of Object.keys(options)) {
     if (!allowed.has(key)) invalidOptions('options contain an unknown key');
+  }
+  for (const key of allowed) {
+    if (!Object.hasOwn(options, key) && key in options) {
+      invalidOptions('options must use own properties rather than inherited properties', key);
+    }
   }
 }
 
@@ -530,12 +535,8 @@ function mostlySequential(buffer) {
   return buffer.length > 1 && sequential / (buffer.length - 1) > 0.7;
 }
 
-function validatePepper(pepper) {
-  const lengthBytes = byteLengthOfPepper(pepper);
-  if (lengthBytes === 0) {
-    return { valid: false, code: 'invalid-type', reason: 'pepper must be a string or byte array', lengthBytes: 0, entropyBitsPerByte: 0, uniqueBytes: 0, warnings: [] };
-  }
-  const buffer = pepperToBuffer(pepper);
+function assessPepperBuffer(buffer) {
+  const lengthBytes = buffer.length;
   const uniqueBytes = new Set(buffer).size;
   const entropyBitsPerByte = shannonEntropyBitsPerByte(buffer);
   const reasons = [];
@@ -556,12 +557,23 @@ function validatePepper(pepper) {
   };
 }
 
+function validatePepper(pepper) {
+  if (byteLengthOfPepper(pepper) === 0) {
+    return { valid: false, code: 'invalid-type', reason: 'pepper must be a string or byte array', lengthBytes: 0, entropyBitsPerByte: 0, uniqueBytes: 0, warnings: [] };
+  }
+  return assessPepperBuffer(pepperToBuffer(pepper));
+}
+
 function assertStrongPepper(pepper) {
-  const result = validatePepper(pepper);
+  const buffer = pepperToBuffer(pepper);
+  if (buffer === null) {
+    fail(CODE.WEAK_PEPPER, 'pepper does not meet tokencage strength requirements');
+  }
+  const result = assessPepperBuffer(buffer);
   if (!result.valid) {
     fail(CODE.WEAK_PEPPER, 'pepper does not meet tokencage strength requirements');
   }
-  return pepperToBuffer(pepper);
+  return buffer;
 }
 
 function validateVersion(version, fallback) {
@@ -732,8 +744,9 @@ function normalizeVerifierConfig(config) {
   } else if (opts.peppers !== undefined) {
     if (Array.isArray(opts.peppers)) {
       if (opts.peppers.length === 0 || opts.peppers.length > MAX_PEPPER_VERSIONS) invalidOptions('peppers list is empty or too large', 'peppers');
-      for (const entry of opts.peppers) {
-        const item = optionsObject(entry, 'pepper entry');
+      for (let index = 0; index < opts.peppers.length; index += 1) {
+        if (!Object.hasOwn(opts.peppers, index)) invalidOptions('peppers list cannot contain holes or inherited entries', 'peppers');
+        const item = optionsObject(opts.peppers[index], 'pepper entry');
         assertKnownKeys(item, ['version', 'pepper']);
         entries.push({ version: validateVersion(item.version), pepper: item.pepper });
       }
@@ -872,7 +885,9 @@ function normalizeScopes(scopes, field) {
   if (!Array.isArray(scopes) || scopes.length > MAX_SCOPES) invalidOptions(field + ' must be an array within the scope count bound', field);
   const output = [];
   const seen = new Set();
-  for (const scope of scopes) {
+  for (let index = 0; index < scopes.length; index += 1) {
+    if (!Object.hasOwn(scopes, index)) invalidOptions(field + ' cannot contain holes or inherited entries', field);
+    const scope = scopes[index];
     if (typeof scope !== 'string' || scope.length > MAX_SCOPE_LENGTH || !SCOPE_RE.test(scope)) {
       invalidOptions(field + ' contains an invalid scope', field);
     }
@@ -887,11 +902,15 @@ function normalizeScopes(scopes, field) {
 function hasScopes(recordScopes, requiredScopes) {
   if (!Array.isArray(recordScopes) || !Array.isArray(requiredScopes)) return false;
   const held = new Set();
-  for (const scope of recordScopes) {
+  for (let index = 0; index < recordScopes.length; index += 1) {
+    if (!Object.hasOwn(recordScopes, index)) return false;
+    const scope = recordScopes[index];
     if (typeof scope !== 'string') return false;
     held.add(scope);
   }
-  for (const scope of requiredScopes) {
+  for (let index = 0; index < requiredScopes.length; index += 1) {
+    if (!Object.hasOwn(requiredScopes, index)) return false;
+    const scope = requiredScopes[index];
     if (typeof scope !== 'string' || !held.has(scope)) return false;
   }
   return true;
@@ -1024,6 +1043,9 @@ const RECORD_KEYS = Object.freeze(['type', 'version', 'hash', 'prefix', 'keyId',
 
 function normalizeStoredRecord(record) {
   if (!isObjectLike(record) || Array.isArray(record)) return { ok: false, reason: 'record must be an object' };
+  for (const key of RECORD_KEYS) {
+    if (!Object.hasOwn(record, key) && key in record) return { ok: false, reason: 'record fields must be own properties' };
+  }
   for (const key of Object.keys(record)) {
     if (!RECORD_KEYS.includes(key)) return { ok: false, reason: 'record contains an unknown field' };
   }
@@ -1198,14 +1220,20 @@ function normalizeHeaderOptions(options, extraKeys) {
   return { opts, maxLength };
 }
 
+function singleHeaderArrayValue(values) {
+  if (values.length !== 1) fail(CODE.INVALID_INPUT, 'multiple credential header values are not accepted');
+  if (!Object.hasOwn(values, 0)) invalidInput('credential header value cannot be inherited');
+  return values[0];
+}
+
 function collectHeaderValue(input, name) {
   const wanted = name.toLowerCase();
   if (typeof input === 'string') return { present: true, value: input };
   if (Array.isArray(input)) {
     if (input.length === 0) return { present: false, value: null };
-    if (input.length !== 1) fail(CODE.INVALID_INPUT, 'multiple credential header values are not accepted');
-    if (typeof input[0] !== 'string') invalidInput('credential header value must be a string');
-    return { present: true, value: input[0] };
+    const value = singleHeaderArrayValue(input);
+    if (typeof value !== 'string') invalidInput('credential header value must be a string');
+    return { present: true, value };
   }
   if (!isObjectLike(input)) invalidInput('headers must be a string, array, map or object');
   if (input instanceof Map) {
@@ -1220,8 +1248,7 @@ function collectHeaderValue(input, name) {
     if (count > 1) fail(CODE.INVALID_INPUT, 'multiple credential headers are not accepted');
     if (count === 0 || found === undefined || found === null) return { present: false, value: null };
     if (Array.isArray(found)) {
-      if (found.length !== 1) fail(CODE.INVALID_INPUT, 'multiple credential header values are not accepted');
-      found = found[0];
+      found = singleHeaderArrayValue(found);
     }
     if (typeof found !== 'string') invalidInput('credential header value must be a string');
     return { present: true, value: found };
@@ -1243,8 +1270,7 @@ function collectHeaderValue(input, name) {
   if (count > 1) fail(CODE.INVALID_INPUT, 'multiple credential headers are not accepted');
   if (count === 0 || found === undefined || found === null) return { present: false, value: null };
   if (Array.isArray(found)) {
-    if (found.length !== 1) fail(CODE.INVALID_INPUT, 'multiple credential header values are not accepted');
-    found = found[0];
+    found = singleHeaderArrayValue(found);
   }
   if (typeof found !== 'string') invalidInput('credential header value must be a string');
   return { present: true, value: found };
@@ -1434,7 +1460,7 @@ function createTokenCage(config) {
     },
     createRecord(token, recordOptions) {
       const recordOpts = optionsObject(recordOptions, 'record options');
-      const algorithm = recordOpts.algorithm === undefined ? 'hmac-sha256' : recordOpts.algorithm;
+      const algorithm = !Object.hasOwn(recordOpts, 'algorithm') || recordOpts.algorithm === undefined ? 'hmac-sha256' : recordOpts.algorithm;
       const merged = { ...recordOpts, prefix: opts.prefix, keyId: useKeyId, allowVendorLikePrefix };
       if (algorithm === 'hmac-sha256') {
         if (verifierNormalized === null) rotationUnavailable();

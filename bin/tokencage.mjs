@@ -20,8 +20,12 @@ function printUsage(stream) {
   stream.write(usage + '\n');
 }
 
+function terminalSafe(text) {
+  return String(text).replace(/[\x00-\x1f\x7f-\x9f]/g, (character) => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 function exitUsage(message) {
-  process.stderr.write('error: ' + message + '\n');
+  process.stderr.write('error: ' + terminalSafe(message) + '\n');
   printUsage(process.stderr);
   process.exit(2);
 }
@@ -45,7 +49,7 @@ function parseArgs(args, booleanFlags, valueFlags) {
       i += 1;
       continue;
     }
-    exitUsage('unknown option ' + arg);
+    exitUsage('unknown option');
   }
   return { flags, positional };
 }
@@ -88,7 +92,7 @@ function commandGenerate(args) {
       process.stdout.write(details.token + '\n');
     }
   } catch (error) {
-    process.stderr.write('error: ' + safeError(error) + '\n');
+    process.stderr.write('error: ' + terminalSafe(safeError(error)) + '\n');
     process.exit(1);
   }
 }
@@ -121,7 +125,7 @@ function commandInspect(args) {
     }
     process.exit(result.valid ? 0 : 1);
   } catch (error) {
-    process.stderr.write('error: ' + safeError(error) + '\n');
+    process.stderr.write('error: ' + terminalSafe(safeError(error)) + '\n');
     process.exit(1);
   }
 }
@@ -275,6 +279,36 @@ function auditConfig(config) {
   return findings;
 }
 
+const MAX_CONFIG_FILE_BYTES = 1048576;
+
+function readConfigFile(configPath) {
+  const initialStats = fs.statSync(configPath);
+  if (!initialStats.isFile() || initialStats.size > MAX_CONFIG_FILE_BYTES) {
+    throw new Error('configuration path is not a regular file within the size bound');
+  }
+  const fd = fs.openSync(configPath, fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK || 0));
+  try {
+    const openStats = fs.fstatSync(fd);
+    if (!openStats.isFile() || openStats.size > MAX_CONFIG_FILE_BYTES) {
+      throw new Error('configuration path is not a regular file within the size bound');
+    }
+    const buffer = Buffer.alloc(Math.min(openStats.size + 1, MAX_CONFIG_FILE_BYTES + 1));
+    let total = 0;
+    while (total < buffer.length) {
+      const count = fs.readSync(fd, buffer, total, buffer.length - total, null);
+      if (count === 0) break;
+      total += count;
+    }
+    const finalStats = fs.fstatSync(fd);
+    if (total > MAX_CONFIG_FILE_BYTES || finalStats.size !== openStats.size || total !== openStats.size) {
+      throw new Error('configuration file exceeds 1 MiB or changed while being read');
+    }
+    return JSON.parse(buffer.subarray(0, total).toString('utf8'));
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 function commandLintConfig(args) {
   const { flags, positional } = parseArgs(args, ['--json'], ['--config']);
   if (positional.length !== 0) exitUsage('lint-config does not accept positional arguments');
@@ -282,9 +316,7 @@ function commandLintConfig(args) {
   if (configPath === undefined) exitUsage('lint-config requires --config');
   let config;
   try {
-    const text = fs.readFileSync(configPath, 'utf8');
-    if (text.length > 1048576) throw new Error('configuration file exceeds 1 MiB');
-    config = JSON.parse(text);
+    config = readConfigFile(configPath);
   } catch (error) {
     process.stderr.write('error: unable to read or parse configuration\n');
     process.exit(1);
@@ -299,7 +331,7 @@ function commandLintConfig(args) {
     process.stdout.write('errors: ' + errors + '\n');
     process.stdout.write('warnings: ' + warnings + '\n');
     for (const item of findings) {
-      process.stdout.write(item.level + ' ' + item.field + ': ' + item.message + '\n');
+      process.stdout.write(item.level + ' ' + terminalSafe(item.field) + ': ' + terminalSafe(item.message) + '\n');
     }
   }
   process.exit(errors === 0 ? 0 : 1);
@@ -319,4 +351,4 @@ if (command === '--version' || command === '-v') {
 if (command === 'generate') commandGenerate(args.slice(1));
 else if (command === 'inspect') commandInspect(args.slice(1));
 else if (command === 'lint-config') commandLintConfig(args.slice(1));
-else exitUsage('unknown command ' + command);
+else exitUsage('unknown command');

@@ -1,0 +1,35 @@
+name: Feature request
+description: Request a narrowly scoped improvement
+title: "feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What security or operational problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the API, CLI or documentation change. Mention compatibility impact.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: List other designs or existing workarounds.
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraint check
+      options:
+        - label: This keeps runtime dependencies at zero
+          required: true
+        - label: This does not weaken token, pepper, scope or expiry validation
+          required: true

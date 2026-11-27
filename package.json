@@ -1,0 +1,64 @@
+{
+  "name": "tokencage",
+  "version": "1.0.0",
+  "description": "Zero-dependency prefixed opaque API keys, checksum inspection, peppered hashing, rotation and scoped token records for Node.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/draarivpatel-ui/tokencage.git"
+  },
+  "homepage": "https://github.com/draarivpatel-ui/tokencage#readme",
+  "bugs": {
+    "url": "https://github.com/draarivpatel-ui/tokencage/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./src/index.mjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "tokencage": "bin/tokencage.mjs"
+  },
+  "files": [
+    "src",
+    "dist",
+    "types",
+    "bin",
+    "docs",
+    "README.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:cjs": "node scripts/build-cjs.mjs",
+    "check:cjs": "node scripts/build-cjs.mjs --check",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "security",
+    "api-keys",
+    "tokens",
+    "session-tokens",
+    "magic-links",
+    "crc32",
+    "hmac",
+    "scrypt",
+    "key-rotation",
+    "zero-dependency"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "dependencies": {},
+  "devDependencies": {}
+}

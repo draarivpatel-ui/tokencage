@@ -1,0 +1,48 @@
+name: Bug report
+description: Report incorrect tokencage behavior
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real tokens, peppers, passwords or private keys. Replace secret material with a generated test value.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the incorrect behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest code or CLI commands that reproduce the issue.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tokencage version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: 20.11.0
+    validations:
+      required: true
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module format
+      options:
+        - ESM
+        - CommonJS
+        - Both
+        - CLI only
+    validations:
+      required: true

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security policy
+    url: https://github.com/draarivpatel-ui/tokencage/security/policy
+    about: Read this before reporting a vulnerability. Never paste real secrets into an issue.

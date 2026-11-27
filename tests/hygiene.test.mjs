@@ -23,7 +23,7 @@ test('required package files exist', () => {
   for (const file of [
     'package.json', 'README.md', 'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md',
     'docs/GOOD_FIRST_ISSUES.md', 'src/index.mjs', 'dist/index.cjs', 'types/index.d.ts',
-    'bin/tokencage.mjs', 'scripts/build-cjs.mjs', 'scripts/smoke.mjs',
+    'bin/tokencage.mjs', 'scripts/build-cjs.mjs', 'scripts/smoke.mjs', 'scripts/run-tests.mjs',
     '.github/workflows/ci.yml', '.github/PULL_REQUEST_TEMPLATE.md'
   ]) {
     assert.equal(fs.existsSync(path.join(root, file)), true, file);

@@ -1,5 +1,7 @@
 # tokencage
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/draarivpatel-ui/tokencage/badge)](https://scorecard.dev/viewer/?uri=github.com/draarivpatel-ui/tokencage)
+
 Zero-dependency Node.js tools for structured opaque tokens: prefixed API keys, session tokens and short magic-link codes.
 
 tokencage generates high-entropy bearer tokens, detects accidental corruption offline with a checksum, hashes token material for at-rest storage, supports zero-downtime pepper rotation, binds verification to expiry and scopes, and redacts secrets safely for logs.

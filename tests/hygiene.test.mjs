@@ -125,10 +125,10 @@ test('README documents rotation nextHash handling', () => {
   assert.match(content, /Only store `nextHash` after the presented token verifies/);
 });
 
-test('README documents zero dependencies', () => {
+test('README documents runtime and development dependency posture', () => {
   const content = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
   assert.match(content, /Runtime dependencies: none/);
-  assert.match(content, /Development dependencies: none/);
+  assert.match(content, /Development dependencies: fast-check for property fuzz tests only/);
 });
 
 test('SECURITY documents private reporting and cryptographic inventory', () => {
@@ -171,10 +171,13 @@ test('CI runs tests build check smoke and pack dry run', () => {
   }
 });
 
-test('public package metadata contains no dependency install spec', () => {
+test('public package metadata keeps runtime empty and fuzzing in development dependencies', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.deepEqual(pkg.dependencies, {});
-  assert.deepEqual(pkg.devDependencies, {});
+  assert.deepEqual(Object.keys(pkg.devDependencies), ['fast-check']);
+  assert.equal(typeof pkg.devDependencies['fast-check'], 'string');
+  assert.equal(pkg.devDependencies['fast-check'].startsWith('^'), false);
+  assert.equal(pkg.devDependencies['fast-check'].startsWith('~'), false);
   assert.equal(pkg.optionalDependencies, undefined);
   assert.equal(pkg.peerDependencies, undefined);
 });

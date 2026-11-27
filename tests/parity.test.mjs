@@ -178,12 +178,15 @@ test('TypeScript declarations document important result fields', () => {
   }
 });
 
-test('package manifest is zero dependency and exact repository metadata', () => {
+test('package manifest keeps runtime dependencies empty and exact repository metadata', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(pkg.name, 'tokencage');
   assert.equal(pkg.version, '1.0.0');
   assert.deepEqual(pkg.dependencies, {});
-  assert.deepEqual(pkg.devDependencies, {});
+  assert.deepEqual(Object.keys(pkg.devDependencies), ['fast-check']);
+  assert.equal(typeof pkg.devDependencies['fast-check'], 'string');
+  assert.equal(pkg.devDependencies['fast-check'].startsWith('^'), false);
+  assert.equal(pkg.devDependencies['fast-check'].startsWith('~'), false);
   assert.equal(pkg.license, 'MIT');
   assert.equal(pkg.repository.url, 'git+https://github.com/draarivpatel-ui/tokencage.git');
   assert.equal(pkg.homepage, 'https://github.com/draarivpatel-ui/tokencage#readme');

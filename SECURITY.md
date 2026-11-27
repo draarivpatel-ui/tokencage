@@ -4,7 +4,7 @@ tokencage handles bearer secrets. Please report vulnerabilities privately and gi
 
 ## Reporting
 
-Open a private GitHub security advisory for `draarivpatel-ui/tokencage` when advisory creation is enabled. If that path is unavailable, open a minimal public issue that says only that you need a private security contact. Do not include a proof of concept, token material, exploit steps or sensitive logs in a public issue.
+Open a [private GitHub security advisory](https://github.com/draarivpatel-ui/tokencage/security/advisories/new). Do not include a proof of concept, token material, exploit steps or sensitive logs in a public issue.
 
 Include in a private report:
 
@@ -45,4 +45,16 @@ Out of scope:
 
 ## Supported versions
 
+| Version | Supported |
+| --- | --- |
+| 1.0.x | Yes |
+| Older than 1.0.0 | No |
+
 Security fixes apply to the latest 1.x release until the project documents otherwise.
+
+## Disclosure timeline
+
+- Acknowledgment: within 48 hours.
+- Initial assessment: within 7 calendar days.
+- Fix or mitigation plan: within 30 calendar days for confirmed high-impact reports.
+- Coordinated public disclosure: up to 90 days by default, adjusted by mutual agreement when exploitation or user risk requires a different date.

@@ -390,7 +390,7 @@ Exit codes:
 - CommonJS entry: `dist/index.cjs`
 - Types: `types/index.d.ts`
 - Runtime dependencies: none
-- Development dependencies: none
+- Development dependencies: fast-check for property fuzz tests only
 - Package side effects: none
 
 The CommonJS build is generated deterministically from the ESM source by `scripts/build-cjs.mjs`. CI checks that the committed build is up to date.

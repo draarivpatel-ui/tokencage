@@ -298,11 +298,49 @@ test('lint-config warns for long-lived tokens', () => {
   assert.equal(JSON.parse(result.stdout).warnings > 0, true);
 });
 
-test('lint-config warns for unknown keys', () => {
+test('lint-config explains that unknown keys are ignored in text and JSON output', () => {
   const file = writeConfig('unknown-key.json', { prefix: 'testapp', unexpected: true });
-  const result = runCli(['lint-config', '--config', file, '--json']);
-  assert.equal(result.status, 0);
-  assert.equal(JSON.parse(result.stdout).warnings > 0, true);
+
+  const textResult = runCli(['lint-config', '--config', file]);
+  assert.equal(textResult.status, 0);
+  assert.match(textResult.stdout, /warning unexpected: unknown configuration key is ignored by lint-config; remove it or correct the spelling before relying on this configuration/);
+
+  const jsonResult = runCli(['lint-config', '--config', file, '--json']);
+  assert.equal(jsonResult.status, 0);
+  const output = JSON.parse(jsonResult.stdout);
+  const finding = output.findings.find((item) => item.code === 'unknown-key');
+  assert.deepEqual(
+    Object.keys(finding).sort(),
+    ['code', 'field', 'level', 'message']
+  );
+  assert.equal(finding.level, 'warning');
+  assert.equal(finding.field, 'unexpected');
+  assert.match(finding.message, /ignored by lint-config/);
+});
+
+test('lint-config escapes control characters in unknown keys in text and JSON output', () => {
+  const hostileKey = '\x1b[31mevil';
+  const config = { prefix: 'testapp' };
+  config[hostileKey] = true;
+  const file = writeConfig('control-bearing-key.json', config);
+
+  const textResult = runCli(['lint-config', '--config', file]);
+  assert.equal(textResult.status, 0);
+  assert.equal(textResult.stdout.includes('\x1b'), false);
+  assert.match(textResult.stdout, /\\u001b\[31mevil/);
+  assert.match(textResult.stdout, /ignored by lint-config/);
+
+  const jsonResult = runCli(['lint-config', '--config', file, '--json']);
+  assert.equal(jsonResult.status, 0);
+  assert.equal(jsonResult.stdout.includes('\x1b'), false);
+  const output = JSON.parse(jsonResult.stdout);
+  const finding = output.findings.find((item) => item.code === 'unknown-key');
+  assert.equal(finding.field, '\\u001b[31mevil');
+  assert.match(finding.message, /ignored by lint-config/);
+  assert.deepEqual(
+    Object.keys(finding).sort(),
+    ['code', 'field', 'level', 'message']
+  );
 });
 
 test('lint-config rejects a non-object JSON config', () => {
